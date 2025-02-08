@@ -24,3 +24,27 @@ app.post("/api/book", (req, res) => {
   bookings.push({ room, date, customer });
   res.json({ success: true, message: "Booking successful!" });
 });
+
+const twilio = require("twilio");
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioNumber = "whatsapp:" + process.env.TWILIO_WHATSAPP_NUMBER;
+const client = twilio(accountSid, authToken);
+
+app.post("/api/notify-whatsapp", async (req, res) => {
+  const { room, date, customer, phone } = req.body;
+  if (!room || !date || !customer || !phone) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+  try {
+    const message = await client.messages.create({
+      from: twilioNumber,
+      to: `whatsapp:${phone}`,
+      body: `New Booking: ${room} on ${date} by ${customer}.`,
+    });
+    res.json({ success: true, messageSid: message.sid });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
